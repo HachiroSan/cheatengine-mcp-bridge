@@ -93,7 +93,7 @@ pip install mcp pywin32
 ```
 
 > [!NOTE]
-> **Windows only** - Uses Named Pipes (`pywin32`)
+> Native mode is **Windows only** because it uses Named Pipes (`pywin32`). WSL2 can use the TCP relay described below.
 
 ---
 
@@ -134,6 +134,50 @@ args = ['C:\path\to\cheatengine-mcp-bridge\MCP_Server\mcp_cheatengine.py']
 ```
 
 Use single quotes for the Windows path so TOML treats backslashes literally.
+
+#### WSL2 TCP relay mode
+
+WSL2 cannot access Windows named pipes directly, even when using host/mirrored networking. To run the MCP server inside WSL2 while Cheat Engine runs on Windows, keep the Lua bridge unchanged and run the TCP relay on Windows.
+
+1. On Windows, load `MCP_Server/ce_mcp_bridge.lua` in Cheat Engine as usual.
+2. On Windows, start the relay:
+
+```powershell
+python C:\path\to\cheatengine-mcp-bridge\MCP_Server\ce_tcp_relay.py --host 127.0.0.1 --port 9876
+```
+
+3. In WSL2, install the MCP dependency without `pywin32`, then run/configure the MCP server with TCP transport:
+
+```bash
+pip install mcp
+```
+
+```bash
+CE_MCP_TRANSPORT=tcp \
+CE_MCP_HOST=127.0.0.1 \
+CE_MCP_PORT=9876 \
+python /mnt/c/path/to/cheatengine-mcp-bridge/MCP_Server/mcp_cheatengine.py
+```
+
+For MCP client configs that support environment variables:
+
+```json
+{
+  "servers": {
+    "cheatengine": {
+      "command": "python",
+      "args": ["/mnt/c/path/to/cheatengine-mcp-bridge/MCP_Server/mcp_cheatengine.py"],
+      "env": {
+        "CE_MCP_TRANSPORT": "tcp",
+        "CE_MCP_HOST": "127.0.0.1",
+        "CE_MCP_PORT": "9876"
+      }
+    }
+  }
+}
+```
+
+If `127.0.0.1` does not reach Windows from your WSL2 networking mode, bind the relay to a specific Windows host address and use that same address as `CE_MCP_HOST` from WSL2. Avoid `--host 0.0.0.0` unless you understand the risk: it exposes Cheat Engine control to the network.
 
 ### 3. Verify Connection
 Use the `ping` tool to verify connectivity:
